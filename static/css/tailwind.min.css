@@ -1,0 +1,121 @@
+/* Tailwind CSS v3.4.0 - Minimal Local Version */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Basic styles to replace Tailwind functionality */
+.bg-gray-50 { background-color: #f9fafb; }
+.bg-white { background-color: white; }
+.bg-blue-500 { background-color: #3b82f6; }
+.bg-green-500 { background-color: #10b981; }
+.bg-purple-500 { background-color: #8b5cf6; }
+.bg-red-500 { background-color: #ef4444; }
+.bg-gray-100 { background-color: #f3f4f6; }
+.bg-gray-200 { background-color: #e5e7eb; }
+.bg-gray-300 { background-color: #d1d5db; }
+
+.text-gray-500 { color: #6b7280; }
+.text-gray-700 { color: #374151; }
+.text-gray-800 { color: #1f2937; }
+.text-white { color: white; }
+.text-blue-500 { color: #3b82f6; }
+.text-purple-500 { color: #8b5cf6; }
+.text-red-500 { color: #ef4444; }
+.text-purple-700 { color: #7c3aed; }
+.text-red-700 { color: #dc2626; }
+.text-gray-700 { color: #374151; }
+
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.flex-grow { flex-grow: 1; }
+.items-center { align-items: center; }
+.justify-center { justify-content: center; }
+.justify-between { justify-content: space-between; }
+.space-x-2 > * + * { margin-left: 0.5rem; }
+.space-y-4 > * + * { margin-top: 1rem; }
+
+.w-full { width: 100%; }
+.max-w-md { max-width: 28rem; }
+.max-w-3xl { max-width: 48rem; }
+.w-80 { width: 20rem; }
+.h-screen { height: 100vh; }
+.flex-auto { flex: 1 1 auto; }
+
+.p-2 { padding: 0.5rem; }
+.p-3 { padding: 0.75rem; }
+.p-4 { padding: 1rem; }
+.p-6 { padding: 1.5rem; }
+.p-8 { padding: 2rem; }
+.px-6 { padding-left: 1.5rem; padding-right: 1.5rem; }
+.py-3 { padding-top: 0.75rem; padding-bottom: 0.75rem; }
+
+.mb-4 { margin-bottom: 1rem; }
+.mb-6 { margin-bottom: 1.5rem; }
+
+.rounded-lg { border-radius: 0.5rem; }
+.rounded-xl { border-radius: 0.75rem; }
+.rounded-l-lg { border-top-left-radius: 0.5rem; border-bottom-left-radius: 0.5rem; }
+.rounded-r-lg { border-top-right-radius: 0.5rem; border-bottom-right-radius: 0.5rem; }
+.rounded-tl-lg { border-top-left-radius: 0.5rem; }
+.rounded-bl-lg { border-bottom-left-radius: 0.5rem; }
+.rounded-tr-lg { border-top-right-radius: 0.5rem; }
+.rounded-br-lg { border-bottom-right-radius: 0.5rem; }
+
+.border { border-width: 1px; }
+.border-gray-300 { border-color: #d1d5db; }
+.border-b { border-bottom-width: 1px; }
+.border-r { border-right-width: 1px; }
+.border-gray-300 { border-color: #d1d5db; }
+
+.shadow-lg { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
+.shadow-sm { box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); }
+
+.hover\:bg-blue-600:hover { background-color: #2563eb; }
+.hover\:bg-green-600:hover { background-color: #059669; }
+.hover\:text-purple-700:hover { color: #7c3aed; }
+.hover\:text-red-700:hover { color: #dc2626; }
+.hover\:text-gray-700:hover { color: #374151; }
+
+.focus\:outline-none:focus { outline: 2px solid transparent; outline-offset: 2px; }
+.focus\:ring-2:focus { box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5); }
+.focus\:ring-blue-500:focus { --tw-ring-color: #3b82f6; }
+
+.transition { transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); transition-duration: 150ms; }
+.duration-150 { transition-duration: 150ms; }
+
+.hidden { display: none; }
+.antialiased { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+.fixed { position: fixed; }
+.inset-0 { top: 0px; right: 0px; bottom: 0px; left: 0px; }
+.z-50 { z-index: 50; }
+
+.bg-black { background-color: #000000; }
+.bg-opacity-50 { opacity: 0.5; }
+
+.overflow-y-auto { overflow-y: auto; }
+.overflow-x-auto { overflow-x: auto; }
+
+.text-xs { font-size: 0.75rem; line-height: 1rem; }
+.text-sm { font-size: 0.875rem; line-height: 1.25rem; }
+.text-lg { font-size: 1.125rem; line-height: 1.75rem; }
+.text-xl { font-size: 1.25rem; line-height: 1.75rem; }
+.text-2xl { font-size: 1.5rem; line-height: 2rem; }
+
+.font-medium { font-weight: 500; }
+.font-semibold { font-weight: 600; }
+.font-bold { font-weight: 700; }
+
+.text-center { text-align: center; }
+.text-left { text-align: left; }
+
+.uppercase { text-transform: uppercase; }
+.tracking-wider { letter-spacing: 0.05em; }
+
+.bg-gray-50 { background-color: #f9fafb; }
+.divide-y > :not([hidden]) ~ :not([hidden]) { border-top-width: 1px; }
+.divide-gray-200 { border-color: #e5e7eb; }
+
+.disabled\:opacity-50:disabled { opacity: 0.5; }
+
+/* Custom styles */
+#message-area { scroll-behavior: smooth; }

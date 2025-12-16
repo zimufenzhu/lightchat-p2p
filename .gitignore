@@ -1,0 +1,29 @@
+# Python compiled files
+*.pyc
+__pycache__/
+
+# Virtual environment
+venv/
+env/
+
+# Database files
+*.db
+instance/
+
+# Log files
+*.log
+
+# Environment variables
+.env
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Debug files
+*.swp
+*.swo

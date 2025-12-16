@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>LightChat P2P</title>
+    <link href="/static/css/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet"> 
+    <style>#message-area { scroll-behavior: smooth; }</style>
+</head>
+<body class="bg-gray-50">
+    <div id="login-screen" class="fixed inset-0 bg-white flex items-center justify-center z-50">
+        <div class="w-full max-w-md p-8 bg-white rounded-xl shadow-lg">
+            <h1 class="text-2xl font-bold text-center mb-6 text-gray-800">LightChat P2P</h1>
+            
+            <!-- 登录和注册切换标签 -->
+            <div class="flex mb-6">
+                <button id="login-tab" class="flex-1 py-3 bg-blue-500 text-white rounded-tl-lg rounded-bl-lg font-medium" data-tab="login">
+                    登录
+                </button>
+                <button id="register-tab" class="flex-1 py-3 bg-gray-200 text-gray-700 rounded-tr-lg rounded-br-lg font-medium" data-tab="register">
+                    注册
+                </button>
+            </div>
+            
+            <!-- 登录表单 -->
+            <div id="login-form" class="space-y-4">
+                <div>
+                    <label for="login-username" class="block text-sm font-medium text-gray-700 mb-1">用户名</label>
+                    <input type="text" id="login-username" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="请输入用户名">
+                </div>
+                <div>
+                    <label for="login-password" class="block text-sm font-medium text-gray-700 mb-1">密码</label>
+                    <input type="password" id="login-password" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="请输入密码">
+                </div>
+                <button id="login-button" class="w-full p-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition duration-150">
+                    登录
+                </button>
+                <div class="text-center text-sm text-gray-500">
+                    测试账号: userA / userB，密码: 123
+                </div>
+            </div>
+            
+            <!-- 注册表单 -->
+            <div id="register-form" class="space-y-4 hidden">
+                <div>
+                    <label for="register-username" class="block text-sm font-medium text-gray-700 mb-1">用户名</label>
+                    <input type="text" id="register-username" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="请输入用户名">
+                </div>
+                <div>
+                    <label for="register-password" class="block text-sm font-medium text-gray-700 mb-1">密码</label>
+                    <input type="password" id="register-password" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="请输入密码">
+                </div>
+                <div>
+                    <label for="register-confirm-password" class="block text-sm font-medium text-gray-700 mb-1">确认密码</label>
+                    <input type="password" id="register-confirm-password" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="请再次输入密码">
+                </div>
+                <button id="register-button" class="w-full p-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition duration-150">
+                    注册
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="chat-app" class="flex h-screen antialiased hidden">
+        <div id="sidebar" class="flex flex-col w-80 bg-gray-100 border-r border-gray-300">
+            <div class="p-4 border-b border-gray-300 flex justify-between items-center">
+                <h2 class="text-xl font-bold">Chats</h2>
+                <div class="flex items-center space-x-2">
+                    <span id="current-user-name" class="font-semibold"></span>
+                    <!-- 管理员面板按钮 -->
+                    <button id="admin-panel-button" class="text-sm text-purple-500 hover:text-purple-700 hidden">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                    <button id="logout-button" class="text-sm text-red-500 hover:text-red-700">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="p-3 border-b border-gray-300">
+                <div class="flex items-center">
+                    <input type="text" id="search-friend" class="flex-grow p-2 rounded-l-lg border focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="搜索好友或添加用户...">
+                    <button id="add-friend-button" class="bg-blue-500 text-white p-2 rounded-r-lg hover:bg-blue-600">
+                        <i class="fas fa-user-plus"></i>
+                    </button>
+                </div>
+            </div>
+            <div id="conversation-list" class="flex-grow overflow-y-auto">
+                </div>
+        </div>
+
+        <div id="main-chat-window" class="flex flex-col flex-auto bg-white">
+            <div id="chat-header" class="p-4 border-b border-gray-300 bg-white shadow-sm flex items-center justify-between">
+                <h3 class="text-lg font-semibold" id="current-contact-name">请选择会话</h3>
+                <button id="clear-chat-button" class="text-sm text-gray-500 hover:text-gray-700 disabled:opacity-50">
+                    <i class="fas fa-trash-alt"></i> 清空聊天记录
+                </button>
+            </div>
+            
+            <div id="message-area" class="flex-grow p-4 overflow-y-auto space-y-4">
+                </div>
+
+            <div id="input-area" class="p-4 border-t border-gray-300">
+                <div class="flex items-center">
+                    <input type="text" id="message-input" placeholder="输入消息..." class="flex-grow p-3 rounded-l-xl border focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <button id="send-button" class="bg-blue-500 text-white p-3 rounded-r-xl hover:bg-blue-600 transition duration-150 disabled:opacity-50" disabled>
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- 管理员面板模态框 -->
+    <div id="admin-panel" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="w-full max-w-3xl bg-white rounded-xl shadow-lg overflow-hidden">
+            <div class="bg-blue-600 text-white p-4 flex justify-between items-center">
+                <h2 class="text-xl font-bold">管理员面板</h2>
+                <button id="close-admin-panel" class="text-white hover:text-gray-200">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <h3 class="text-lg font-semibold mb-4">用户管理</h3>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead>
+                            <tr>
+                                <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                                <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">用户名</th>
+                                <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">管理员状态</th>
+                                <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="user-table-body" class="bg-white divide-y divide-gray-200">
+                            <!-- 用户列表将通过JavaScript动态生成 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/client.js"></script>
+</body>
+</html>
