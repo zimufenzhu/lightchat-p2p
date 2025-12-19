@@ -13,3 +13,8 @@ class Config:
     # Redis 配置 (用于用户状态映射)
     REDIS_HOST = os.environ.get('REDIS_HOST') or 'localhost'
     REDIS_PORT = int(os.environ.get('REDIS_PORT') or 6379)
+    
+    # 文件上传配置
+    UPLOAD_FOLDER = os.path.join('static', 'uploads', 'images')
+    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+    MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB

@@ -1,9 +1,11 @@
-from flask import Flask, request, jsonify, session
+from flask import Flask, request, jsonify, session, send_from_directory
 from flask_socketio import SocketIO, emit, disconnect
 from config import Config
 from models import db, User, Conversation, Message, Friendship, bcrypt
 from utils.redis_helpers import set_user_socket, get_user_socket, remove_user_socket
 from datetime import datetime
+import os
+import uuid
 
 # --- 初始化 ---
 app = Flask(__name__)
@@ -27,6 +29,14 @@ def is_admin():
     user = get_current_user()
     return user and user.is_admin
 
+# --- 文件上传辅助函数 ---
+# 确保上传文件夹存在
+if not os.path.exists(app.config['UPLOAD_FOLDER']):
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
+
 # --- 辅助函数：查找或创建会话 ---
 def get_or_create_conversation(user_one_id, user_two_id):
     # 确保 user_one_id < user_two_id 的顺序，方便查找
@@ -43,6 +53,47 @@ def get_or_create_conversation(user_one_id, user_two_id):
 @app.route('/')
 def index():
     return app.send_static_file('index.html')
+
+# --- 图片上传路由 ---
+@app.route('/api/upload/image', methods=['POST'])
+def upload_image():
+    # 检查用户是否登录
+    if not get_current_user_id():
+        return jsonify({'message': 'User not authenticated'}), 401
+
+    # 检查是否有文件上传
+    if 'image' not in request.files:
+        return jsonify({'message': 'No image file provided'}), 400
+
+    file = request.files['image']
+    
+    # 检查文件是否有名称
+    if file.filename == '':
+        return jsonify({'message': 'No selected image file'}), 400
+
+    # 检查文件类型是否允许
+    if not allowed_file(file.filename):
+        return jsonify({'message': 'File type not allowed'}), 400
+
+    try:
+        # 生成唯一文件名
+        unique_filename = str(uuid.uuid4()) + '.' + file.filename.rsplit('.', 1)[1].lower()
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+
+        # 保存文件
+        file.save(file_path)
+
+        # 生成图片URL
+        image_url = '/uploads/images/' + unique_filename
+
+        return jsonify({'message': 'Image uploaded successfully', 'image_url': image_url}), 200
+    except Exception as e:
+        return jsonify({'message': 'Failed to upload image', 'error': str(e)}), 500
+
+# --- 静态文件路由 (用于访问上传的图片) ---
+@app.route('/uploads/images/<filename>')
+def uploaded_image(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 @app.route('/api/auth/login', methods=['POST'])
 def login():
@@ -84,43 +135,56 @@ def logout():
 
 @app.route('/api/friends', methods=['GET'])
 def get_friends():
-    user_id = get_current_user_id()
-    if not user_id: return jsonify({'message': 'Unauthorized'}), 401
+    try:
+        user_id = get_current_user_id()
+        if not user_id: 
+            return jsonify({'message': 'Unauthorized'}), 401
 
-    # 获取用户的所有好友
-    friends = []
-    
-    # 查询用户作为 user_a 的好友
-    friendships_as_a = Friendship.query.filter_by(user_a_id=user_id, status='Accepted').all()
-    for friendship in friendships_as_a:
-        friends.append(friendship.user_b)
-    
-    # 查询用户作为 user_b 的好友
-    friendships_as_b = Friendship.query.filter_by(user_b_id=user_id, status='Accepted').all()
-    for friendship in friendships_as_b:
-        friends.append(friendship.user_a)
-    
-    # 为每个好友获取会话信息
-    results = []
-    for friend in friends:
-        # 获取会话
-        conv = get_or_create_conversation(user_id, friend.id)
+        # 获取用户的所有好友
+        friends = []
         
-        # 获取最后一条消息
-        last_message = Message.query.filter_by(conversation_id=conv.id).order_by(Message.timestamp.desc()).first()
+        # 查询用户作为 user_a 的好友
+        friendships_as_a = Friendship.query.filter_by(user_a_id=user_id, status='Accepted').all()
+        for friendship in friendships_as_a:
+            friends.append(friendship.user_b)
         
-        # 获取未读消息数
-        unread_count = Message.query.filter_by(conversation_id=conv.id, is_read=False, sender_id=friend.id).count()
+        # 查询用户作为 user_b 的好友
+        friendships_as_b = Friendship.query.filter_by(user_b_id=user_id, status='Accepted').all()
+        for friendship in friendships_as_b:
+            friends.append(friendship.user_a)
         
-        results.append({
-            'conversation_id': conv.id,
-            'receiver_id': friend.id,
-            'receiver_name': friend.username,
-            'last_message_content': last_message.content if last_message else 'No messages yet.',
-            'unread_count': unread_count
-        })
-    
-    return jsonify(results)
+        # 为每个好友获取会话信息
+        results = []
+        for friend in friends:
+            try:
+                # 获取会话
+                conv = get_or_create_conversation(user_id, friend.id)
+                
+                # 获取最后一条消息
+                last_message = Message.query.filter_by(conversation_id=conv.id).order_by(Message.timestamp.desc()).first()
+                
+                # 获取未读消息数
+                unread_count = Message.query.filter_by(conversation_id=conv.id, is_read=False, sender_id=friend.id).count()
+                
+                # 安全地处理last_message为None的情况
+                last_message_content = 'No messages yet.'
+                if last_message is not None:
+                    last_message_content = last_message.content if last_message.content else 'No messages yet.'
+                
+                results.append({
+                    'conversation_id': conv.id,
+                    'receiver_id': friend.id,
+                    'receiver_name': friend.username,
+                    'last_message_content': last_message_content,
+                    'unread_count': unread_count
+                })
+            except Exception as e:
+                # 即使某个朋友处理出错，也继续处理其他朋友
+                continue
+        
+        return jsonify(results)
+    except Exception as e:
+        return jsonify({'message': 'Internal server error', 'error': str(e)}), 500
 
 @app.route('/api/friends/add/<username>', methods=['POST'])
 def add_friend(username):
@@ -134,9 +198,13 @@ def add_friend(username):
     # 不能添加自己
     if friend_user.id == user_id: return jsonify({'message': 'Cannot add yourself as friend'}), 400
     
-    # 检查是否已经是好友
+    # 检查是否已经是好友 (更全面的检查)
     u1, u2 = min(user_id, friend_user.id), max(user_id, friend_user.id)
-    existing_friendship = Friendship.query.filter_by(user_a_id=u1, user_b_id=u2).first()
+    existing_friendship = Friendship.query.filter(
+        ((Friendship.user_a_id == u1) & (Friendship.user_b_id == u2)) |
+        ((Friendship.user_a_id == u2) & (Friendship.user_b_id == u1))
+    ).first()
+    
     if existing_friendship:
         return jsonify({'message': 'Already friends'}), 400
     
@@ -183,7 +251,7 @@ def get_history(conversation_id):
     db.session.commit()
 
     return jsonify([
-        {'sender_id': msg.sender_id, 'content': msg.content, 'timestamp': msg.timestamp.isoformat()}
+        {'sender_id': msg.sender_id, 'content': msg.content, 'type': msg.type, 'timestamp': msg.timestamp.isoformat()}
         for msg in messages
     ])
 
@@ -293,8 +361,6 @@ def delete_user(user_id):
 @app.errorhandler(Exception)
 def handle_exception(e):
     """全局异常处理，确保所有API错误返回JSON响应"""
-    import traceback
-    traceback.print_exc()  # 打印完整的错误堆栈，便于调试
     if request.path.startswith('/api/'):
         # 如果是API请求，返回JSON错误响应
         return jsonify({'message': 'Internal Server Error', 'error': str(e)}), 500
@@ -309,15 +375,13 @@ def handle_connect():
     user_id = session.get('user_id') 
     if user_id is None:
         # 如果未认证，断开连接
-        print(f"Connection rejected: User not authenticated. SID: {request.sid}")
         disconnect()
         return False
     
     # 存储用户ID和Socket ID的映射
     set_user_socket(user_id, request.sid)
     # 存储反向映射，便于 disconnect 时查询 user_id (可选优化)
-    # redis_client.set(f"sid:{request.sid}", user_id, ex=SOCKET_TTL) 
-    print(f"User {user_id} connected with SID: {request.sid}")
+    # redis_client.set(f"sid:{request.sid}", user_id, ex=SOCKET_TTL)
 
 
 @socketio.on('disconnect')
@@ -327,13 +391,13 @@ def handle_disconnect():
     user_id = session.get('user_id') 
     if user_id:
         remove_user_socket(user_id)
-        print(f"User {user_id} disconnected.")
 
 @socketio.on('send_msg')
 def handle_send_message(data):
     sender_id = get_current_user_id()
     receiver_id = data.get('receiver_id')
     content = data.get('content')
+    message_type = data.get('type', 'text')  # 默认文本类型
     
     if not sender_id or not receiver_id or not content:
         return
@@ -346,6 +410,7 @@ def handle_send_message(data):
         conversation_id=conv.id, 
         sender_id=sender_id, 
         content=content,
+        type=message_type,  # 添加消息类型
         is_read=False # 默认未读
     )
     db.session.add(new_message)
@@ -358,6 +423,7 @@ def handle_send_message(data):
         'conversation_id': conv.id,
         'sender_id': sender_id,
         'content': content,
+        'type': message_type,  # 添加消息类型到DTO
         'timestamp': new_message.timestamp.isoformat()
     }
 

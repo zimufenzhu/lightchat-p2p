@@ -17,6 +17,8 @@ let registerUsername, registerPassword, registerConfirmPassword;
 let adminPanelButton, adminPanel, closeAdminPanelButton, userTableBody;
 // 清空聊天记录按钮
 let clearChatButton;
+// 图片上传元素
+let imageUpload;
 
 // 初始化事件监听
 document.addEventListener('DOMContentLoaded', () => {
@@ -53,6 +55,12 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // 初始化清空聊天记录按钮
     clearChatButton = document.getElementById('clear-chat-button');
+    
+    // 初始化图片上传元素
+    imageUpload = document.getElementById('image-upload');
+    
+    // 添加图片上传事件监听
+    imageUpload.addEventListener('change', handleImageUpload);
     
     // 添加事件监听
     loginButton.addEventListener('click', handleLogin);
@@ -143,7 +151,6 @@ async function handleRegister() {
         
         if (response.ok) {
             const data = await response.json();
-            console.log(`User ${username} registered successfully.`);
             
             // 注册成功后自动切换到登录表单
             switchTab('login');
@@ -161,7 +168,6 @@ async function handleRegister() {
             alert(`注册失败: ${error.message}`);
         }
     } catch (error) {
-        console.error('Register error:', error);
         alert('注册时发生错误，请检查服务器连接');
     }
 }
@@ -185,7 +191,6 @@ async function handleLogin() {
         
         if (response.ok) {
             const data = await response.json();
-            console.log(`User ${username} logged in successfully.`);
             currentUserId = data.user_id;
             currentUserName = data.username;
             currentUserIsAdmin = data.is_admin;
@@ -219,7 +224,6 @@ async function handleLogin() {
             alert('登录失败，请检查用户名和密码');
         }
     } catch (error) {
-        console.error('Login error:', error);
         alert('登录时发生错误，请检查服务器连接');
     }
 }
@@ -231,7 +235,6 @@ async function handleLogout() {
         });
         
         if (response.ok) {
-            console.log('User logged out successfully.');
             
             // 断开Socket连接
             if (socket) {
@@ -260,7 +263,6 @@ async function handleLogout() {
             alert('退出登录失败');
         }
     } catch (error) {
-        console.error('Logout error:', error);
         alert('退出登录时发生错误');
     }
 }
@@ -270,11 +272,9 @@ function initSocket() {
     socket = io(); 
     
     socket.on('connect', () => {
-        console.log('Socket Connected. Ready for P2P messaging.');
     });
 
     socket.on('disconnect', () => {
-        console.log('Socket Disconnected.');
     });
 
     socket.on('receive_msg', handleIncomingMessage);
@@ -285,7 +285,18 @@ function initSocket() {
 async function loadConversations() {
     conversationList.innerHTML = '';
     const response = await fetch('/api/friends');
+    
+    // 检查响应是否成功
+    if (!response.ok) {
+        return;
+    }
+    
     const conversations = await response.json();
+    
+    // 确保返回的是数组
+    if (!Array.isArray(conversations)) {
+        return;
+    }
     
     conversations.forEach(conv => {
         const item = document.createElement('div');
@@ -330,7 +341,6 @@ async function handleAddFriend() {
             alert(`添加好友失败: ${error.message}`);
         }
     } catch (error) {
-        console.error('Add friend error:', error);
         alert('添加好友时发生错误');
     }
 }
@@ -353,9 +363,18 @@ async function switchConversation(cid, rid, rname) {
 
     // 加载历史消息
     messageArea.innerHTML = '';
-    const response = await fetch(`/api/history/${cid}`);
-    const history = await response.json();
-    history.forEach(msg => appendMessage(msg, msg.sender_id === currentUserId));
+    try {
+        const response = await fetch(`/api/history/${cid}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const history = await response.json();
+        // 确保history是数组
+        if (Array.isArray(history)) {
+            history.forEach(msg => appendMessage(msg, msg.sender_id === currentUserId));
+        }
+    } catch (error) {
+    }
 }
 
 function handleIncomingMessage(data) {
@@ -370,7 +389,6 @@ function handleIncomingMessage(data) {
     
     // 3. 消息通知（可选：如果不是当前聊天，弹窗/声音提示）
     if (!isCurrentChat && data.sender_id !== currentUserId) {
-         console.log(`New message from ${data.sender_id} in conversation ${data.conversation_id}`);
     }
 }
 
@@ -449,7 +467,6 @@ async function loadAllUsers() {
             alert(`加载用户列表失败: ${error.message}`);
         }
     } catch (error) {
-        console.error('Load all users error:', error);
         alert('加载用户列表时发生错误');
     }
 }
@@ -462,7 +479,6 @@ async function toggleAdminStatus(userId) {
         
         if (response.ok) {
             const data = await response.json();
-            console.log(`Admin status updated for user ${userId}: ${data.is_admin}`);
             
             // 重新加载用户列表以显示更新后的状态
             loadAllUsers();
@@ -471,7 +487,6 @@ async function toggleAdminStatus(userId) {
             alert(`更新管理员状态失败: ${error.message}`);
         }
     } catch (error) {
-        console.error('Toggle admin status error:', error);
         alert('更新管理员状态时发生错误');
     }
 }
@@ -489,7 +504,6 @@ async function deleteUser(userId, username) {
         
         if (response.ok) {
             const data = await response.json();
-            console.log(`User ${username} deleted successfully.`);
             alert(data.message);
             
             // 重新加载用户列表
@@ -500,12 +514,10 @@ async function deleteUser(userId, username) {
                 const error = await response.json();
                 alert(`删除用户失败: ${error.message}`);
             } catch (jsonError) {
-                console.error('JSON parse error:', jsonError);
                 alert(`删除用户失败: 服务器返回错误 (状态码: ${response.status})`);
             }
         }
     } catch (error) {
-        console.error('Delete user error:', error);
         alert('删除用户时发生错误');
     }
 }
@@ -529,7 +541,6 @@ async function handleClearChat() {
         
         if (response.ok) {
             const data = await response.json();
-            console.log('Chat history cleared successfully.');
             
             // 清空消息区域
             messageArea.innerHTML = '';
@@ -541,8 +552,51 @@ async function handleClearChat() {
             alert(`清空聊天记录失败: ${error.message}`);
         }
     } catch (error) {
-        console.error('Clear chat history error:', error);
         alert('清空聊天记录时发生错误');
+    }
+}
+
+// --- 图片上传处理 ---
+async function handleImageUpload(e) {
+    const file = e.target.files[0];
+    if (!file || !currentConversationId) return;
+
+    try {
+        // 创建FormData对象上传图片
+        const formData = new FormData();
+        formData.append('image', file);
+
+        // 上传图片到服务器
+        const response = await fetch('/api/upload/image', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            const imageUrl = data.image_url;
+
+            // 发送图片消息
+            const messageData = {
+                receiver_id: currentReceiverId,
+                content: imageUrl,
+                type: 'image'
+            };
+            
+            socket.emit('send_msg', messageData);
+            
+            // 清空文件输入
+            imageUpload.value = '';
+        } else {
+            const error = await response.json();
+            alert(`图片上传失败: ${error.message}`);
+            // 清空文件输入
+            imageUpload.value = '';
+        }
+    } catch (error) {
+        alert('图片上传时发生错误');
+        // 清空文件输入
+        imageUpload.value = '';
     }
 }
 
@@ -554,6 +608,7 @@ function handleSendMessage() {
     const messageData = {
         receiver_id: currentReceiverId,
         content: content,
+        type: 'text'
     };
     
     socket.emit('send_msg', messageData);
@@ -569,17 +624,72 @@ function appendMessage(message, is_mine) {
         ? 'bg-blue-500 text-white p-3 rounded-xl rounded-br-none max-w-xs md:max-w-md shadow-md'
         : 'bg-gray-200 text-gray-800 p-3 rounded-xl rounded-tl-none max-w-xs md:max-w-md shadow-sm';
     
-    bubble.innerHTML = `
-        <div class="flex flex-col">
-             <div class="${contentClasses}">
+    // 根据消息类型渲染不同内容
+    let messageContent;
+    if (message.type === 'image') {
+        // 微信风格的图片展示
+        const imgContainerClasses = is_mine 
+            ? 'bg-blue-500 p-1 rounded-xl rounded-br-none' 
+            : 'bg-gray-200 p-1 rounded-xl rounded-bl-none';
+            
+        messageContent = `
+            <div class="${imgContainerClasses}">
+                <img src="${message.content}" alt="Image" class="max-w-64 max-h-64 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 cursor-pointer object-cover" onclick="viewImage('${message.content}')">
+                <div class="text-xs mt-1 ${is_mine ? 'text-blue-200' : 'text-gray-500'} text-right px-2 py-1">
+                    ${new Date(message.timestamp).toLocaleTimeString()}
+                </div>
+            </div>
+        `;
+    } else {
+        // 默认文本消息
+        messageContent = `
+            <div class="${contentClasses}">
                 ${message.content}
                 <div class="text-xs mt-1 ${is_mine ? 'text-blue-200' : 'text-gray-500'} text-right">
                     ${new Date(message.timestamp).toLocaleTimeString()}
                 </div>
             </div>
+        `;
+    }
+    
+    bubble.innerHTML = `
+        <div class="flex flex-col">
+            ${messageContent}
         </div>
     `;
     messageArea.appendChild(bubble);
     // 滚动到底部
     messageArea.scrollTop = messageArea.scrollHeight; 
+}
+
+// 图片查看功能
+function viewImage(imageUrl) {
+    // 创建模态框查看图片
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4';
+    modal.innerHTML = `
+        <div class="relative w-full h-full flex items-center justify-center">
+            <img src="${imageUrl}" class="max-w-full max-h-full object-contain">
+            <button class="absolute top-4 right-4 text-white text-3xl bg-black bg-opacity-30 rounded-full w-12 h-12 flex items-center justify-center hover:bg-opacity-50 transition-all duration-200" onclick="this.parentElement.parentElement.remove()">
+                &times;
+            </button>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    
+    // 点击模态框外部关闭
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    });
+    
+    // 添加键盘事件监听，按ESC键关闭
+    const handleEscKey = (e) => {
+        if (e.key === 'Escape') {
+            modal.remove();
+            document.removeEventListener('keydown', handleEscKey);
+        }
+    };
+    document.addEventListener('keydown', handleEscKey);
 }

@@ -42,5 +42,6 @@ class Message(db.Model):
     conversation_id = db.Column(db.Integer, db.ForeignKey('conversation.id', ondelete='CASCADE'), nullable=False, index=True)
     sender_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
     content = db.Column(db.Text, nullable=False)
+    type = db.Column(db.String(10), default='text', nullable=False)  # 添加消息类型字段
     timestamp = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     is_read = db.Column(db.Boolean, default=False)
